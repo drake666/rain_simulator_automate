@@ -207,12 +207,13 @@ class NuScenesDataset(VisionDataset):
 
         return camera_settings
 
-    def estimate_camera_motions(self, sensor=""):
+    def estimate_camera_motions(self, sensor="", use_specific_tokens=True):
         # Returns a list of camera motion per scene (dict, scene token)
         sensor = sensor if sensor else self.sensor
         assert sensor
 
         camera_motions = dict()
+        all_tokens = set(self.tokens)
         for t in set(self.scene_tokens):
             scene = self.nusc.get("scene", t)
             first_sample = self.nusc.get("sample", scene["first_sample_token"])
@@ -228,6 +229,9 @@ class NuScenesDataset(VisionDataset):
                 if self.only_annotated and not sample_data["is_key_frame"]:
                     continue
 
+                if use_specific_tokens and sample_data["token"] not in all_tokens:
+                    continue
+
                 ego_pose = self.nusc.get("ego_pose", sample_data["ego_pose_token"])
                 if sample_data["token"] == first_sample_data_token:
                     last_camera_position = np.array(ego_pose["translation"])
@@ -240,12 +244,13 @@ class NuScenesDataset(VisionDataset):
 
         return camera_motions
 
-    def estimate_sequences_duration(self, sensor="", epsilon=1e-3):
+    def estimate_sequences_duration(self, sensor="", use_specific_tokens=True):
         # Returns 1 duration per scene (dict, scene token)
         sensor = sensor if sensor else self.sensor
         assert sensor
 
         scenes_duration = dict()
+        all_tokens = set(self.tokens)
         for t in set(self.scene_tokens):
             scene = self.nusc.get("scene", t)
             first_sample = self.nusc.get("sample", scene["first_sample_token"])
@@ -260,6 +265,9 @@ class NuScenesDataset(VisionDataset):
                 curr_token = sample_data["next"]
 
                 if self.only_annotated and not sample_data["is_key_frame"]:
+                    continue
+
+                if use_specific_tokens and sample_data["token"] not in all_tokens:
                     continue
 
                 scenes_duration[t].append(sample_data["timestamp"])
