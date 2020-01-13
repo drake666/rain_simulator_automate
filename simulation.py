@@ -26,30 +26,36 @@ sequence_code["cityscape"] = "90"
 
 
 class WeatherSimulation(threading.Thread):
-    def __init__(self, sequence, weather, window_mode=True):
+    def __init__(self, sequence, weather, redo=False, window_mode=True,
+                 bin_folder="/weather/rain_simulation_automate/bin"):
         threading.Thread.__init__(self)
 
         self.sequence = sequence
         self.weather = weather
         self.window_mode = window_mode
+        self.redo = redo
+        self.bin_folder = bin_folder
 
-    def run(self, redo=False):
+    def run(self):
         sequence = self.sequence
         weather = self.weather
 
-        output_dir = os.path.join(os.getcwd(), 'output', sequence[0], sequence[1],
+        #output_dir = os.path.join(os.getcwd(), 'output', sequence[0], sequence[1],
+        #                          "%s_%smm" % (weather["weather"], str(weather["fallrate"])))
+        output_dir = os.path.join("/data/ahl/", sequence[0], sequence[1],
                                   "%s_%smm" % (weather["weather"], str(weather["fallrate"])))
         os.makedirs(output_dir, exist_ok=True)
 
         # Yeah, perhaps I don't want to redo everything...
-        if not redo:
+        if not self.redo:
             files = os.listdir(output_dir)
-            results_computed = np.any(["fps_camera0.xml" in f for f in files])
+            results_computed = np.any(["camera0.xml" in f for f in files])
             if results_computed:
+                print("Simulation alreay performed on {}/{}/{}_{}mm, next!".format(sequence[0], sequence[1], weather["weather"], weather["fallrate"]))
                 return
 
         logfile = open(os.path.join(output_dir, 'automate_log.txt'), 'a+')
-        child = PopenSpawn('bin/AHLSimulation.exe', cwd=output_dir, logfile=logwriter(logfile))
+        child = PopenSpawn(os.path.join(self.bin_folder, 'AHLSimulation'), cwd=output_dir, logfile=logwriter(logfile))
 
         try:
             print(" In main menu")
@@ -110,17 +116,6 @@ class WeatherSimulation(threading.Thread):
                 print(" Send: ", code)
                 child.sendline(code.encode('ascii'))
 
-            # if sequence[0].lower() == "nuscenes":
-            #     print(" In main menu")
-            #     print(" Starting simulation")
-            #     child.expect('What do you want to do \?')
-            #     child.sendline('1'.encode('ascii'))
-            #
-            #     child.expect('\[Simulation stopped\]', timeout=None)
-            #     print(" Simulation stopped")
-            #     time.sleep(5.)  # Wait for the "Press any key to continue"
-            #     child.sendline(b'\n')
-            # else:
             print(" In main menu")
             print(" Going to step menu")
             child.expect('What do you want to do \?')
@@ -139,7 +134,7 @@ class WeatherSimulation(threading.Thread):
                 child.expect("Separator")
                 child.sendline(';'.encode('ascii'))
                 child.expect("Enter all steps values")
-                print("		Camera 0 motion speed min, max: {}, {}".format(np.min(speed), np.max(speed)))
+                print("		Camera 0 motion speeds (min, max): ({}, {})".format(np.min(speed), np.max(speed)))
                 child.sendline(';'.join([str(s) for s in speed.tolist()]).encode('ascii'))
                 child.expect("Continue")
                 child.sendline('y'.encode('ascii'))
@@ -170,9 +165,9 @@ class WeatherSimulation(threading.Thread):
             child.sendline(b'\n')
 
             child.wait()
-            child.kill(signal.CTRL_C_EVENT)
+            child.kill(signal.SIGINT)
 
             logfile.close()
         except ExceptionPexpect as e:
             print(e)
-            child.kill(signal.CTRL_C_EVENT)
+            child.kill(signal.SIGINT)
