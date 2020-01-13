@@ -27,7 +27,7 @@ sequence_code["cityscape"] = "90"
 
 class WeatherSimulation(threading.Thread):
     def __init__(self, sequence, weather, redo=False, window_mode=True,
-                 bin_folder="/weather/rain_simulation_automate/bin"):
+                 bin_folder="/weather/rain_simulator_automate/bin"):
         threading.Thread.__init__(self)
 
         self.sequence = sequence
@@ -86,7 +86,7 @@ class WeatherSimulation(threading.Thread):
                 raise NotImplementedError("No settings for this set {}".format(sequence[0]))
 
             # Deactivate windows AND save light map option (I was lazy that day)
-            if not self.window_mode:
+            if self.window_mode:
                 print(" In main menu")
                 child.expect('What do you want to do \?')
                 child.sendline('28'.encode('ascii'))

@@ -18,7 +18,7 @@ for fallrate in [100]: #5, 17, 25, 50, 75, 100, 200, 300, 400]:
 with open("v1.0-trainval_both_nnight_nrain_val.json") as f:
     tokens = json.load(f)["sample_data_tokens"]
 
-nusc = NuScenesDataset(version="v1.0-trainval", root="E:/Usagers2/matre697/PhD/Datasets.nobkp/nuscenes",
+nusc = NuScenesDataset(version="v1.0-trainval", root="/data/nuscenes",
                        specific_tokens=tokens,
                        only_annotated=False)
 cameras = nusc.estimate_camera_settings("CAM_FRONT")
@@ -52,7 +52,7 @@ window_mode = False
 threads = np.array([], object)
 for weather in weathers:
     for sequence in sequences:
-        print("Create thread: ", sequence, weather)
+        print("Create thread: ", sequence[:2], weather)
         sim = WeatherSimulation(sequence, weather, window_mode)
         threads = np.append(threads, sim)
 
@@ -62,7 +62,7 @@ while len(threads) > 0:
 
     if np.sum(thread_not_started_mask) > 0:
         t = threads[thread_not_started_mask][0]
-        print("START thread: ", t.sequence, t.weather)
+        print("START thread: ", t.sequence[:2], t.weather)
         t.start()
         # to ensure that the seed (which seems to use the time in sec :| ?!) won't be the same
         time.sleep(1.5)
@@ -74,7 +74,7 @@ while len(threads) > 0:
 
     thread_ended_mask = np.array([not t.isAlive() and t._started.is_set() for t in threads])
     for t in threads[thread_ended_mask]:
-        print("Thread ended: ", t.sequence, t.weather)
+        print("Thread ended: ", t.sequence[:2], t.weather)
     threads = threads[~thread_ended_mask]
 
     # Wait for all threads if no remaining ones
